@@ -1,0 +1,159 @@
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionVectorParameter_BCB172C9"
+   Begin Object Class=/Script/Engine.MaterialExpressionVectorParameter Name="MaterialExpressionVectorParameter_BCB172C9"
+   End Object
+   
+   Begin Object Name="MaterialExpressionVectorParameter_BCB172C9"
+      DefaultValue=(R=0,G=0,B=0,A=1)
+      ParameterName="WorldPosition"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=0
+      MaterialExpressionGuid=D1C45351638A9569A4DCC821D1C5455A
+   End Object
+   MaterialExpression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_BCB172C9"'
+   NodePosX=-400
+   NodePosY=0
+   NodeGuid=11F0360CEA5E9A54B1159BDEE36C2E44
+   CustomProperties Pin (PinId=0F97CD5AD17C9B3C404A922F7888E856,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionScalarParameter_A1417513"
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_A1417513"
+   End Object
+   
+   Begin Object Name="MaterialExpressionScalarParameter_A1417513"
+      DefaultValue=0
+      ParameterName="WaterLevel"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=200
+      MaterialExpressionGuid=56B521F2376C06F41ADD58EA86CF08B9
+   End Object
+   MaterialExpression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_A1417513"'
+   NodePosX=-400
+   NodePosY=200
+   NodeGuid=18754049DCB293312D5FCB345F2B91E2
+   CustomProperties Pin (PinId=72028613C739EA7504599686C5BFD139,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionScalarParameter_08AFE2AF"
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_08AFE2AF"
+   End Object
+   
+   Begin Object Name="MaterialExpressionScalarParameter_08AFE2AF"
+      DefaultValue=0
+      ParameterName="Feather"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=400
+      MaterialExpressionGuid=9B28853E243DD001E1356D561A5BBE10
+   End Object
+   MaterialExpression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_08AFE2AF"'
+   NodePosX=-400
+   NodePosY=400
+   NodeGuid=5425641A3FCC3B7E2A3BC30544F0DCCB
+   CustomProperties Pin (PinId=5D12504E44D6B259BB2E95A4FE50DFD9,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionVectorParameter_D73DF4DC"
+   Begin Object Class=/Script/Engine.MaterialExpressionVectorParameter Name="MaterialExpressionVectorParameter_D73DF4DC"
+   End Object
+   
+   Begin Object Name="MaterialExpressionVectorParameter_D73DF4DC"
+      DefaultValue=(R=0,G=0,B=0,A=1)
+      ParameterName="AboveWaterColor"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=600
+      MaterialExpressionGuid=77AA05592F3C4BE13E8EF45CC961A0A3
+   End Object
+   MaterialExpression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_D73DF4DC"'
+   NodePosX=-400
+   NodePosY=600
+   NodeGuid=714EEF8ECEF8A2F0DC9FCBFF66D3924A
+   CustomProperties Pin (PinId=4F07C1B2AF94E98571213349999030C1,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionScalarParameter_65D0D6FE"
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_65D0D6FE"
+   End Object
+   
+   Begin Object Name="MaterialExpressionScalarParameter_65D0D6FE"
+      DefaultValue=0
+      ParameterName="AboveWaterAlpha"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=800
+      MaterialExpressionGuid=30D489B681C135300C81E116DD9488E4
+   End Object
+   MaterialExpression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_65D0D6FE"'
+   NodePosX=-400
+   NodePosY=800
+   NodeGuid=5001C9559D12A0F588BBD0A39CE6FBE2
+   CustomProperties Pin (PinId=81A8010D7BB9CC1D48B3D342F2C2B78C,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionVectorParameter_27E9A46C"
+   Begin Object Class=/Script/Engine.MaterialExpressionVectorParameter Name="MaterialExpressionVectorParameter_27E9A46C"
+   End Object
+   
+   Begin Object Name="MaterialExpressionVectorParameter_27E9A46C"
+      DefaultValue=(R=0,G=0,B=0,A=1)
+      ParameterName="UnderwaterColor"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=1000
+      MaterialExpressionGuid=EF7D08E60C41F0D3643390C896C40A4B
+   End Object
+   MaterialExpression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_27E9A46C"'
+   NodePosX=-400
+   NodePosY=1000
+   NodeGuid=D4A8DDEB03B67D2FA929378B5C521174
+   CustomProperties Pin (PinId=6667A1BD82405E28ECC93F9A5440D56A,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="GraphNode_MaterialExpressionScalarParameter_2A1B236A"
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_2A1B236A"
+   End Object
+   
+   Begin Object Name="MaterialExpressionScalarParameter_2A1B236A"
+      DefaultValue=0
+      ParameterName="UnderwaterAlpha"
+      MaterialExpressionEditorX=-400
+      MaterialExpressionEditorY=1200
+      MaterialExpressionGuid=AEA96EB5E340D8FBB3D0693726047676
+   End Object
+   MaterialExpression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_2A1B236A"'
+   NodePosX=-400
+   NodePosY=1200
+   NodeGuid=062CC7583D8764780DBF946159E9800B
+   CustomProperties Pin (PinId=E69A9C80ED4CDAFA74B6365747D76C8E,PinName="Output",Direction="EGPD_Output")
+End Object
+
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_6DFF9103"
+   Begin Object Class=/Script/Engine.MaterialExpressionCustom Name="MaterialExpressionCustom_6DFF9103"
+   End Object
+   Begin Object Name="MaterialExpressionCustom_6DFF9103"
+      Code="/* =================================================================================\r\n * [Unreal Material Custom Node Template]\r\n * ---------------------------------------------------------------------------------\r\n * 1. CONFIGURATION (节点属性设置)\r\n * - Description (描述): 基于世界空间Z轴高度区分水上和水下状态，并分别赋予自定义颜色（包含透明度）。输出包含Alpha的四维颜色值。\r\n * - Output Type (输出类型): [CMOT Float 4]\r\n *\r\n * 2. INPUTS (需要在 Custom 节点上添加的引脚)\r\n * 注意：引脚名称必须与下方代码中的变量名完全一致\r\n * ------------------------------------------------------------------------------\r\n * Pin 0 Name: [WorldPosition]    | Type suggestion: Vector 3 (推荐连接: Absolute World Position)\r\n * Pin 1 Name: [WaterLevel]       | Type suggestion: Scalar (推荐: 暴露为材质参数)\r\n * Pin 2 Name: [Feather]          | Type suggestion: Scalar (推荐: 暴露为材质参数，例如 10.0)\r\n * Pin 3 Name: [AboveWaterColor]  | Type suggestion: Vector 3 (水上基础颜色 RGB)\r\n * Pin 4 Name: [AboveWaterAlpha]  | Type suggestion: Scalar   (水上透明度 Alpha)\r\n * Pin 5 Name: [UnderwaterColor]  | Type suggestion: Vector 3 (水下基础颜色 RGB)\r\n * Pin 6 Name: [UnderwaterAlpha]  | Type suggestion: Scalar   (水下透明度 Alpha)\r\n * =================================================================================\r\n */\r\n\r\n// --- [CODE BODY START] ---\r\n\r\n// 1. 将输入的 RGB 和 Alpha 组装成安全的 float4 颜色\r\n// 这可以彻底避免 float3 无法隐式转换为 float4 的报错\r\nfloat4 colorAbove = float4(AboveWaterColor, AboveWaterAlpha);\r\nfloat4 colorUnder = float4(UnderwaterColor, UnderwaterAlpha);\r\n\r\n// 2. 安全处理：防止羽化值为0导致除以0的报错\r\nfloat safeFeather = max(Feather, 0.0001);\r\n\r\n// 3. 计算高度差 (水面高度 - 像素当前世界高度)\r\n// 当像素位于水下时 (WorldPosition.z < WaterLevel)，depthDiff 为正数\r\n// 当像素位于水上时 (WorldPosition.z > WaterLevel)，depthDiff 为负数\r\nfloat depthDiff = WaterLevel - WorldPosition.z;\r\n\r\n// 4. 计算浸没遮罩并限制在 0~1 之间\r\nfloat mask = saturate(depthDiff / safeFeather);\r\n\r\n// 5. 根据遮罩混合水上和水下颜色 (包括 Alpha 通道)\r\nfloat4 finalColor = lerp(colorAbove, colorUnder, mask);\r\n\r\n// Return\r\nreturn finalColor;\r\n\r\n// --- [CODE BODY END] ---"
+      OutputType=CMOT_Float4
+      Inputs(0)=(InputName="WorldPosition",Expression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_BCB172C9"')
+      Inputs(1)=(InputName="WaterLevel",Expression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_A1417513"')
+      Inputs(2)=(InputName="Feather",Expression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_08AFE2AF"')
+      Inputs(3)=(InputName="AboveWaterColor",Expression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_D73DF4DC"')
+      Inputs(4)=(InputName="AboveWaterAlpha",Expression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_65D0D6FE"')
+      Inputs(5)=(InputName="UnderwaterColor",Expression=MaterialExpressionVectorParameter'"MaterialExpressionVectorParameter_27E9A46C"')
+      Inputs(6)=(InputName="UnderwaterAlpha",Expression=MaterialExpressionScalarParameter'"MaterialExpressionScalarParameter_2A1B236A"')
+      Desc="Generated by BuilderToolKit"
+      MaterialExpressionEditorX=200
+      MaterialExpressionEditorY=0
+      MaterialExpressionGuid=C03C77204333B133B85CBE7D9E4C61AE
+   End Object
+   MaterialExpression=/Script/Engine.MaterialExpressionCustom'"MaterialExpressionCustom_6DFF9103"'
+   NodePosX=200
+   NodePosY=0
+   NodeGuid=03336A0798D88A06356A55B899BDCAD2
+   CustomProperties Pin (PinId=179E103DDAB26B49F2975744282D9C18,PinName="WorldPosition",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=CF5D5E7C61AB4C80A2F698D508C71CC0,PinName="WaterLevel",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=F604B0921670118916A59ADD457D203D,PinName="Feather",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=0C57CD37C1AB5D5EBCBB0A0296F8B13B,PinName="AboveWaterColor",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=1B0F1F6844535380C5DCBC56634A70D6,PinName="AboveWaterAlpha",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=D18103035CC8D002D8D158622E6D1661,PinName="UnderwaterColor",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=16D5826EEC66FB60A30FE598463B2266,PinName="UnderwaterAlpha",PinType.PinCategory="required")
+   CustomProperties Pin (PinId=16A558C43000644B12D7CB27EA2E1DCB,PinName="Output",Direction="EGPD_Output")
+
+End Object

@@ -1,0 +1,12 @@
+/uetx
+/uetx.exe
+*.exe
+*.dll
+*.so
+*.dylib
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
