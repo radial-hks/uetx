@@ -266,6 +266,33 @@ go test ./... -update                                  # Update golden files
 go test ./internal/material/parser/ -run TestParseName # Single test
 ```
 
+## Skill Integration (Claude Code)
+
+uetx ships with a built-in [Claude Code](https://claude.ai/code) Skill that lets you describe a shader effect in natural language and get a pasteable T3D material graph.
+
+**Usage:** Type `/uetx` followed by your shader description:
+
+```
+/uetx create a Fresnel-based edge glow effect, output float3 color
+/uetx -m M_Lava --clipboard scrolling UV effect for lava texture
+/uetx -r "Opacity" -r "Base Color" dissolve effect using noise threshold
+```
+
+**Pipeline:** Natural Language → HLSL Template → `uetx generate` → T3D Text
+
+The skill automatically:
+1. Generates an HLSL Custom Node template following UE formatting rules
+2. Feeds it to `uetx generate` to produce the T3D material graph
+3. Presents results with stats (node count, edge count, warnings)
+
+**Prerequisites:** The `uetx` binary must be available in your PATH. Install via:
+
+```bash
+go install github.com/radial/uetx/cmd/uetx@latest
+```
+
+Skill definition: [`skills/uetx-material/SKILL.md`](skills/uetx-material/SKILL.md)
+
 ## Design Documents
 
 Detailed specifications live in `cli-design/`:
@@ -276,6 +303,10 @@ Detailed specifications live in `cli-design/`:
 | `IO_PROTOCOL.md` | JSON contracts, error codes, encoding rules |
 | `COMMANDS.md` | CLI flags, config merge, exit codes |
 | `ARCHITECTURE.md` | Module boundaries, type contracts |
+
+## FAQ
+
+See [FAQ.md](FAQ.md) for deployment decisions and design rationale.
 
 ## License
 

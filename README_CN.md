@@ -266,6 +266,33 @@ go test ./... -update                                  # 更新 golden 文件
 go test ./internal/material/parser/ -run TestParseName # 单个测试
 ```
 
+## Skill 集成（Claude Code）
+
+uetx 内置了 [Claude Code](https://claude.ai/code) Skill，只需用自然语言描述着色器效果，即可生成可粘贴的 T3D 材质图。
+
+**使用方式：** 输入 `/uetx` 加上效果描述：
+
+```
+/uetx 创建一个基于菲涅尔的边缘发光效果，输出 float3 颜色
+/uetx -m M_Lava --clipboard 熔岩纹理的 UV 滚动效果
+/uetx -r "Opacity" -r "Base Color" 基于噪声阈值的溶解效果
+```
+
+**流水线：** 自然语言 → HLSL 模板 → `uetx generate` → T3D 文本
+
+Skill 自动完成：
+1. 按照 UE 格式规范生成 HLSL Custom Node 模板
+2. 调用 `uetx generate` 生成 T3D 材质图
+3. 展示结果统计（节点数、连线数、警告信息）
+
+**前置条件：** `uetx` 二进制文件需在系统 PATH 中。安装方式：
+
+```bash
+go install github.com/radial/uetx/cmd/uetx@latest
+```
+
+Skill 定义文件：[`skills/uetx-material/SKILL.md`](skills/uetx-material/SKILL.md)
+
 ## 设计文档
 
 详细规格说明在 `cli-design/` 目录中：
@@ -276,6 +303,10 @@ go test ./internal/material/parser/ -run TestParseName # 单个测试
 | `IO_PROTOCOL.md` | JSON 契约、错误码、编码规则 |
 | `COMMANDS.md` | CLI 参数、配置合并、退出码 |
 | `ARCHITECTURE.md` | 模块边界、类型契约 |
+
+## 常见问题
+
+参见 [FAQ.md](FAQ.md) 了解部署决策和设计理由。
 
 ## 许可证
 

@@ -92,6 +92,12 @@ Reference implementations in `cli-design/reference/`:
 - **App tests**: end-to-end with IO boundary
 - **Golden comparison is structural** (not byte-exact) because GUIDs vary — compare node counts/types, pin sets, connection graph isomorphism, code content, and output types
 
+## Skills
+
+- **uetx-material** (`skills/uetx-material/SKILL.md`) — Natural language → HLSL template → T3D material graph. Trigger: `/uetx`
+
+When the user types `/uetx`, invoke the Skill tool with `skill: "uetx-material"` before doing anything else.
+
 ## Exit Codes
 
 - `0` success, `1` business error, `2` warnings-only (strict mode), `64` usage error, `70` internal error
