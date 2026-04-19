@@ -1,12 +1,21 @@
+# Build output
 /uetx
 /uetx.exe
-*.exe
+/dist/
+
+# Binaries
 *.dll
 *.so
 *.dylib
+
+# IDE
 .idea/
 .vscode/
+
+# Editor swap files
 *.swp
 *.swo
 *~
+
+# OS
 .DS_Store

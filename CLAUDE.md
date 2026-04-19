@@ -37,24 +37,27 @@ go run ./cmd/uetx/ version
 Strict one-way dependency hierarchy (bottom-up only):
 
 ```
-cmd/uetx/              ← CLI entry (Cobra or std flag)
+cmd/uetx/              ← CLI entry (stdlib flag)
   ↓
 internal/app/          ← Application layer (config merge, IO, diagnostics)
   ↓
-parser/ + build/ + serializer/  ← Business logic
+internal/material/parser/ + build/ + serializer/  ← Business logic
   ↓
-domain/                ← Pure data types (Pin, Node, Edge) — zero dependencies
+internal/domain/       ← Pure data types (Pin, Node, Edge) — zero dependencies
 ```
 
+Go module: `github.com/radial/uetx`
+
 Key directories:
-- `cmd/uetx/` — CLI dispatcher, flag parsing, exit codes
+- `cmd/uetx/` — CLI dispatcher, flag parsing, exit codes (single-file `main.go`)
 - `internal/app/material/` — generate/inspect/validate workflows
 - `internal/material/parser/` — HLSL template regex parsing, type inference
 - `internal/material/build/` — IR construction (root, custom, params, breakout, edges)
 - `internal/material/serializer/` — T3D text output with UE escape rules
-- `domain/` — Core types: `GraphNode`, `Pin`, `Edge`, `ParamType`, `OutputType`
-- `pkg/uetx/` — Public stable API (semver-locked)
-- `testdata/material/` — Golden files and test fixtures
+- `internal/domain/` — Core types: `GraphNode`, `Pin`, `Edge`, `ParamType`, `OutputType`
+- `internal/version/` — Version info (ldflags injection)
+- `pkg/uetx/` — Public stable API (semver-locked, reserved for future)
+- `testdata/material/golden/` — Golden files (`M_WaterLevel.hlsl`, `M_WaterLevel.t3d`)
 
 ## Key Design Documents
 
