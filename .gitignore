@@ -17,5 +17,8 @@
 *.swo
 *~
 
+# Skill working artifacts (duplicates testdata/)
+skills/uetx-material/material/
+
 # OS
 .DS_Store
