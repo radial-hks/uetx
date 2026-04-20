@@ -114,7 +114,7 @@ func TestInspect(t *testing.T) {
 	if err != nil {
 		t.Fatalf("read HLSL: %v", err)
 	}
-	resp := Inspect(string(hlsl))
+	resp := Inspect(domain.GenerateRequest{HLSL: string(hlsl)})
 	if !resp.OK {
 		t.Fatalf("inspect failed: %v", resp.Errors)
 	}
@@ -123,5 +123,102 @@ func TestInspect(t *testing.T) {
 	}
 	if resp.T3D != "" {
 		t.Error("inspect should not produce T3D")
+	}
+}
+
+func TestInspect_WithOverrides(t *testing.T) {
+	hlsl, err := os.ReadFile("../../../testdata/material/golden/M_WaterLevel.hlsl")
+	if err != nil {
+		t.Fatalf("read HLSL: %v", err)
+	}
+	resp := Inspect(domain.GenerateRequest{
+		HLSL:         string(hlsl),
+		MaterialName: "M_Test",
+		OutputType:   domain.CMOTFloat3,
+		Routing:      []string{"Emissive Color"},
+	})
+	if !resp.OK {
+		t.Fatalf("inspect failed: %v", resp.Errors)
+	}
+	if resp.EffectiveOutputType != domain.CMOTFloat3 {
+		t.Errorf("outputType = %q, want CMOT_Float3 (override)", resp.EffectiveOutputType)
+	}
+	if len(resp.EffectiveRouting) != 1 || resp.EffectiveRouting[0] != "Emissive Color" {
+		t.Errorf("routing = %v, want [Emissive Color] (override)", resp.EffectiveRouting)
+	}
+	if resp.MaterialName != "M_Test" {
+		t.Errorf("materialName = %q, want M_Test", resp.MaterialName)
+	}
+	// Parsed inputs should still come through when no explicit inputs given
+	if len(resp.InferredInputs) != 7 {
+		t.Errorf("inferred inputs = %d, want 7", len(resp.InferredInputs))
+	}
+}
+
+func TestValidate_Basic(t *testing.T) {
+	hlsl, err := os.ReadFile("../../../testdata/material/golden/M_WaterLevel.hlsl")
+	if err != nil {
+		t.Fatalf("read HLSL: %v", err)
+	}
+	resp := Validate(domain.GenerateRequest{HLSL: string(hlsl)})
+	if !resp.OK {
+		t.Fatalf("validate failed: %v", resp.Errors)
+	}
+}
+
+func TestValidate_InvalidRouting(t *testing.T) {
+	resp := Validate(domain.GenerateRequest{
+		HLSL:    "/* Pin 0 Name: [X] | Type suggestion: Scalar */\nreturn X;",
+		Routing: []string{"NotARealSlot"},
+	})
+	if resp.OK {
+		t.Fatal("expected failure for invalid routing slot")
+	}
+	hasE102 := false
+	for _, e := range resp.Errors {
+		if e.Code == "E102" {
+			hasE102 = true
+		}
+	}
+	if !hasE102 {
+		t.Error("expected E102 error")
+	}
+}
+
+func TestValidate_InvalidOutputType(t *testing.T) {
+	resp := Validate(domain.GenerateRequest{
+		HLSL:       "/* Pin 0 Name: [X] | Type suggestion: Scalar */\nreturn X;",
+		OutputType: "CMOT_Float9",
+	})
+	if resp.OK {
+		t.Fatal("expected failure for invalid output type")
+	}
+	hasE101 := false
+	for _, e := range resp.Errors {
+		if e.Code == "E101" {
+			hasE101 = true
+		}
+	}
+	if !hasE101 {
+		t.Error("expected E101 error")
+	}
+}
+
+func TestValidate_InvalidMaterialName(t *testing.T) {
+	resp := Validate(domain.GenerateRequest{
+		HLSL:         "/* Pin 0 Name: [X] | Type suggestion: Scalar */\nreturn X;",
+		MaterialName: "M Bad Name!",
+	})
+	if resp.OK {
+		t.Fatal("expected failure for invalid material name")
+	}
+	hasE110 := false
+	for _, e := range resp.Errors {
+		if e.Code == "E110" {
+			hasE110 = true
+		}
+	}
+	if !hasE110 {
+		t.Error("expected E110 error")
 	}
 }

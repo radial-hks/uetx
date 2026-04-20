@@ -44,7 +44,9 @@ HLSL（+可选 JSON 配置）→ T3D 文本。
 | `-t, --output-type <v>` | `CMOT_Float1..4`，覆盖模板推断 | 推断/`CMOT_Float3` |
 | `-r, --route <slot>` | 追加 routing，可重复；如 `-r "Base Color" -r Opacity` | 走 defaultRouting |
 | `--input <spec>` | 追加/覆盖输入，格式 `name:type[:default][:rgb]`，可重复 | 走模板解析 |
-| `--json` | 以 `GenerateResponse` JSON 输出到 stdout（此时 `-o` 被忽略） | false |
+| `--json` | 以 `GenerateResponse` JSON 输出到 stdout；若 `-o` 为显式文件路径则仍写 T3D | false |
+| `--json-out <path>` | 将 JSON 响应写入文件（UTF-8 无 BOM），可与 `--json` 和 `-o` 同时使用 | 无 |
+| `--artifact-dir <dir>` | 将 `output.t3d`、`generate.json`、`effective-config.json` 写入目录 | 无 |
 | `--seed <int>` | 固定 GUID 随机种子（测试用） | 0（随机） |
 | `--clipboard` | 同时把 T3D 写入系统剪贴板（跨平台） | false |
 | `--no-crlf` | 以 LF 输出（仅调试，UE 要求 CRLF） | false |
@@ -83,8 +85,11 @@ uetx generate -i bare.hlsl \
 
 只做解析，不做 T3D 序列化。用于 Skill 先"看一眼"模板想推断出什么。
 
+支持 `-m`、`-r`、`--input`、`-t` 等上下文 flags，用于预览最终 generate 的有效配置。
+
 ```bash
-uetx inspect -i shader.hlsl [--json]
+uetx inspect -i shader.hlsl [--json] [--json-out path]
+uetx inspect -i shader.hlsl -m M_Water -r "Base Color" -r Opacity --json
 ```
 
 **文本输出**（非 `--json`）：
@@ -106,8 +111,11 @@ Warnings: 0
 ## 四、`validate`
 
 ```bash
-uetx validate -i shader.hlsl [-c config.json] [--json]
+uetx validate -i shader.hlsl [-c config.json] [--json] [--json-out path]
+uetx validate -i shader.hlsl -m M_Water -r "Base Color" -t CMOT_Float3 --json
 ```
+
+支持 `-m`、`-r`、`--input`、`-t` 等上下文 flags，可对最终配置做预检。验证内容包括：材质名格式（E110）、outputType 有效性（E101）、routing slot 有效性（E102）、input type 有效性（E103）。
 
 只运行 parse + 配置合并 + 规则检查，不做 build/serialize。退出码：
 - `0`：通过

@@ -116,7 +116,9 @@ scripts\uetx.exe generate -i testdata\material\skill_breathing_light\breathing_c
 
 以下问题都来自这次对 `scripts/uetx.exe` 的实际调用过程，目的是让后续 Skill 更易用。
 
-### 改进点 1: `--json` 与 `-o` 不能同时满足“写文件 + 返回机器可读摘要”
+> **状态更新 (2026-04-20):** 以下 4 个改进点均已实现并合入。
+
+### 改进点 1: `--json` 与 `-o` 不能同时满足”写文件 + 返回机器可读摘要” ✅ 已实现
 
 当前 `generate --json` 会直接把 JSON 打到 stdout，并跳过 `-o` 写文件流程。结果是 Skill 如果既想保留 `.t3d` 文件，又想拿到 `stats/materialName/effectiveRouting` 等机器可读数据，就必须执行两次 `generate`。
 
@@ -125,7 +127,9 @@ scripts\uetx.exe generate -i testdata\material\skill_breathing_light\breathing_c
 - 增加 `--json-out <path>`。
 - 或允许 `--json` 与 `-o` 同时生效：stdout 输出 JSON，`-o` 正常写 T3D。
 
-### 改进点 2: Windows PowerShell 下 JSON 重定向容易变成 UTF-16LE
+**实现方案：** 新增 `--json-out <path>` flag，写 UTF-8 JSON 到文件；同时修复 `--json` + `-o` 逻辑——当 `-o` 为显式文件路径时，T3D 始终写入。
+
+### 改进点 2: Windows PowerShell 下 JSON 重定向容易变成 UTF-16LE ✅ 已实现
 
 这次为了保留 JSON 响应，使用了 PowerShell 重定向保存 stdout。结果产物文件是 UTF-16LE BOM，这对后续脚本处理、diff 查看和跨工具消费都不够友好。
 
@@ -134,16 +138,20 @@ scripts\uetx.exe generate -i testdata\material\skill_breathing_light\breathing_c
 - 增加 `--json-out <path>`，并明确固定写 UTF-8。
 - 同理可考虑 `--stderr-out <path>` 或统一 artifact 输出目录。
 
-### 改进点 3: `inspect` / `validate` 不能完整复现最终 `generate` 的上下文
+**实现方案：** `--json-out <path>` 通过 Go 的 `os.WriteFile` 直接写 UTF-8 字节，绕过 shell 重定向，不产生 BOM。
+
+### 改进点 3: `inspect` / `validate` 不能完整复现最终 `generate` 的上下文 ✅ 已实现
 
 当前 `inspect` 和 `validate` 没有和 `generate` 对齐的全部覆盖参数组合，例如最终路由、显式输入覆盖、材质名等上下文不容易在预检阶段完全重现。
 
 建议：
 
 - 让 `inspect` / `validate` 也支持 `-m`、`-r`、`--input`、`-t`。
-- 这样 Skill 可以先做“最终配置的预检”，再做一次真正生成。
+- 这样 Skill 可以先做”最终配置的预检”，再做一次真正生成。
 
-### 改进点 4: 缺少面向 Skill 的统一产物输出模式
+**实现方案：** `inspect` 和 `validate` 现在接受 `-m`、`-r`、`--input`、`-t` flags。`Validate` 还新增了 E101/E102/E103/E110 验证。
+
+### 改进点 4: 缺少面向 Skill 的统一产物输出模式 ✅ 已实现
 
 这次流程里我们分别保留了 HLSL、T3D、inspect JSON、validate JSON、generate JSON。对 Skill 来说，这是一组天然相关的产物，但当前要靠外部脚本逐个保存。
 
@@ -153,6 +161,8 @@ scripts\uetx.exe generate -i testdata\material\skill_breathing_light\breathing_c
 - 一次运行后在目录中输出：`request.json`、`inspect.json`、`generate.json`、`output.t3d`。
 - 同时可选地输出 `effective-config.json`，方便溯源和复测。
 
+**实现方案：** `generate --artifact-dir <dir>` 一次写出 `output.t3d`、`generate.json`、`effective-config.json` 三个文件。
+
 ## 8. 结论
 
 本次 Skill 流程已经成功落地，且生成结果满足目标：
@@ -161,4 +171,6 @@ scripts\uetx.exe generate -i testdata\material\skill_breathing_light\breathing_c
 - HLSL 和 T3D 文件均已保留。
 - 生成图结构稳定，可复现，使用固定 `--seed 20260420` 可得到一致结果。
 
-如果后续要把这个流程进一步产品化，优先建议处理 `--json-out` 和 `--artifact-dir`，这两项对 Skill 集成收益最高。
+~~如果后续要把这个流程进一步产品化，优先建议处理 `--json-out` 和 `--artifact-dir`，这两项对 Skill 集成收益最高。~~
+
+上述改进点已全部实现（2026-04-20）。

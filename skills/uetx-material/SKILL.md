@@ -129,7 +129,7 @@ cat > /tmp/uetx_skill_temp.hlsl << 'HLSL_EOF'
 <generated HLSL template>
 HLSL_EOF
 
-# Generate T3D via JSON API
+# Generate T3D via JSON API (--json-out writes UTF-8 JSON to file, -o writes T3D)
 uetx generate -i /tmp/uetx_skill_temp.hlsl --json
 ```
 
@@ -137,6 +137,8 @@ If the user specified a material name, add `-m <name>`.
 If the user specified routing, add `-r "<slot>"` for each slot.
 If the user wants clipboard output, add `--clipboard`.
 If the user wants file output, add `-o <path>`.
+If the user wants both T3D file and JSON metadata, use `-o <path>.t3d --json-out <path>.json` (both work simultaneously).
+If the user wants all artifacts in one directory, use `--artifact-dir <dir>` to produce `output.t3d`, `generate.json`, and `effective-config.json`.
 
 ### Step 4: Handle Response
 Parse the JSON response:
@@ -167,6 +169,8 @@ The user's input after `/uetx` can include optional flags mixed with the descrip
 | `-r "<slot>"` | Route to material slot | `/uetx -r "Opacity" a dissolve effect` |
 | `--clipboard` | Copy T3D to clipboard | `/uetx --clipboard fire effect` |
 | `--seed <N>` | Fixed seed for reproducibility | `/uetx --seed 42 noise pattern` |
+| `--json-out <path>` | Write JSON response to file (UTF-8) | `/uetx --json-out result.json fire effect` |
+| `--artifact-dir <dir>` | Write all artifacts to directory | `/uetx --artifact-dir ./out fire effect` |
 
 If no flags are provided, use defaults: material name `M_CustomNode`, output to stdout, default routing.
 
@@ -178,6 +182,9 @@ If no flags are provided, use defaults: material name `M_CustomNode`, output to 
 | E002 | No comment block found | Missing `/* ... */` header — fix template |
 | E011 | Duplicate pin name | Two pins share the same name — rename one |
 | E020 | Invalid output type | Must be CMOT_Float1..4 — fix template |
+| E101 | Unknown output type | Use CMOT_Float1, CMOT_Float2, CMOT_Float3, or CMOT_Float4 |
+| E102 | Unknown routing slot | Check slot name against UE Root pin table |
+| E103 | Unknown input type | Use scalar, vector, time, uv, or worldposition |
 | E110 | Illegal material name | Name must be `[A-Za-z0-9_]` only |
 | W001 | No return statement | Add `return` to code body |
 | W002 | Zero pins parsed | Pin format not matching — check `[]` brackets |

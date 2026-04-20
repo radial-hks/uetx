@@ -118,7 +118,9 @@ uetx generate -i shader.hlsl --clipboard
 | `-t, --output-type` | `CMOT_Float1..4` | inferred |
 | `-r, --route` | Routing slot (repeatable) | default |
 | `--input` | Input spec `name:type[:default[:rgb]]` (repeatable) | parsed |
-| `--json` | Output JSON response | false |
+| `--json` | Output JSON response to stdout; `-o` still writes T3D if set to a file path | false |
+| `--json-out` | Write JSON response to file (UTF-8, no BOM) | — |
+| `--artifact-dir` | Write `output.t3d`, `generate.json`, `effective-config.json` to directory | — |
 | `--stdin-json` | Read JSON request from stdin | false |
 | `--seed` | Fixed GUID seed | 0 (random) |
 | `--clipboard` | Copy to system clipboard | false |
@@ -126,24 +128,29 @@ uetx generate -i shader.hlsl --clipboard
 
 ### `uetx inspect`
 
-Parse template and show inferred metadata (no T3D output).
+Parse template and show inferred metadata (no T3D output). Supports `-m`, `-r`, `--input`, `-t` to preview the effective configuration that `generate` would use.
 
 ```bash
 uetx inspect -i shader.hlsl
+# Material: M_CustomNode (default)
 # Output Type: CMOT_Float4
 # Routing: Base Color, Opacity
 # Inputs (7):
 #   - WorldPosition: vector
 #   - WaterLevel: scalar
 #   ...
+
+# Preview with generate-context overrides
+uetx inspect -i shader.hlsl -m M_Water -r "Base Color" -r "Emissive Color" --json
 ```
 
 ### `uetx validate`
 
-Check template + config for errors.
+Check template + config for errors. Supports `-m`, `-r`, `--input`, `-t` to validate the full effective configuration, including routing slot validity (E102), output type (E101), material name (E110), and input types (E103).
 
 ```bash
 uetx validate -i shader.hlsl -c config.json
+uetx validate -i shader.hlsl -m M_Water -r "Base Color" --json
 ```
 
 ### `uetx version`

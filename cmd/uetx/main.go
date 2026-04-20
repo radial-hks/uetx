@@ -8,6 +8,7 @@ import (
 	"log"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 
@@ -100,6 +101,9 @@ func runMaterialCommand(action string, args []string) {
 	var inputs multiFlag
 	fs.Var(&inputs, "input", "Input spec name:type[:default[:rgb]] (repeatable)")
 
+	jsonOutFile := fs.String("json-out", "", "Write JSON response to file (UTF-8)")
+	artifactDir := fs.String("artifact-dir", "", "Write artifacts to directory (generate only)")
+
 	if err := fs.Parse(args); err != nil {
 		os.Exit(exitUsage)
 	}
@@ -107,11 +111,12 @@ func runMaterialCommand(action string, args []string) {
 	switch action {
 	case "generate":
 		runGenerate(*inFile, *outFile, *configFile, *matName, *outputType,
-			routes, inputs, *jsonOutput, *stdinJSON, *seed, *clipboard, *noCRLF)
+			routes, inputs, *jsonOutput, *stdinJSON, *seed, *clipboard, *noCRLF,
+			*jsonOutFile, *artifactDir)
 	case "inspect":
-		runInspect(*inFile, *jsonOutput)
+		runInspect(*inFile, *matName, *outputType, routes, inputs, *jsonOutput, *jsonOutFile)
 	case "validate":
-		runValidate(*inFile, *configFile, *jsonOutput)
+		runValidate(*inFile, *configFile, *matName, *outputType, routes, inputs, *jsonOutput, *jsonOutFile)
 	default:
 		fmt.Fprintf(os.Stderr, "unknown material action: %s\n", action)
 		os.Exit(exitUsage)
@@ -119,7 +124,8 @@ func runMaterialCommand(action string, args []string) {
 }
 
 func runGenerate(inFile, outFile, configFile, matName, outputType string,
-	routes, inputSpecs []string, jsonOutput, stdinJSON bool, seed int64, clipboard, noCRLF bool) {
+	routes, inputSpecs []string, jsonOutput, stdinJSON bool, seed int64, clipboard, noCRLF bool,
+	jsonOutFile, artifactDir string) {
 
 	var req domain.GenerateRequest
 
@@ -180,18 +186,27 @@ func runGenerate(inFile, outFile, configFile, matName, outputType string,
 
 	resp := material.Generate(req)
 
+	// Marshal JSON once if any JSON output path is active
+	var jsonData []byte
+	if jsonOutput || jsonOutFile != "" || artifactDir != "" {
+		jsonData, _ = json.Marshal(resp)
+	}
+
+	// JSON to stdout
 	if jsonOutput {
-		data, _ := json.Marshal(resp)
-		fmt.Println(string(data))
-		if !resp.OK {
-			os.Exit(exitBusiness)
-		}
-		return
+		fmt.Println(string(jsonData))
+	}
+
+	// JSON to file (UTF-8, no BOM — solves Windows PowerShell UTF-16LE issue)
+	if jsonOutFile != "" {
+		writeJSONFile(jsonOutFile, jsonData)
 	}
 
 	if !resp.OK {
-		for _, e := range resp.Errors {
-			log.Printf("%s: %s", e.Code, e.Message)
+		if !jsonOutput {
+			for _, e := range resp.Errors {
+				log.Printf("%s: %s", e.Code, e.Message)
+			}
 		}
 		os.Exit(exitBusiness)
 	}
@@ -200,12 +215,19 @@ func runGenerate(inFile, outFile, configFile, matName, outputType string,
 		log.Printf("%s: %s", w.Code, w.Message)
 	}
 
+	// Write T3D: skip stdout only when --json already targets stdout
 	output := resp.T3D
 	if noCRLF {
 		output = strings.ReplaceAll(output, "\r\n", "\n")
 	}
+	if !(jsonOutput && (outFile == "-" || outFile == "")) {
+		writeOutput(outFile, output)
+	}
 
-	writeOutput(outFile, output)
+	// Artifact directory
+	if artifactDir != "" {
+		writeArtifacts(artifactDir, resp, jsonData, req.Seed)
+	}
 
 	if clipboard {
 		if err := copyToClipboard(output); err != nil {
@@ -214,14 +236,45 @@ func runGenerate(inFile, outFile, configFile, matName, outputType string,
 	}
 }
 
-func runInspect(inFile string, jsonOutput bool) {
+func runInspect(inFile, matName, outputType string, routes, inputSpecs []string, jsonOutput bool, jsonOutFile string) {
 	hlsl := readInput(inFile)
-	resp := material.Inspect(hlsl)
+
+	req := domain.GenerateRequest{HLSL: hlsl}
+	if matName != "" {
+		req.MaterialName = matName
+	}
+	if outputType != "" {
+		req.OutputType = domain.OutputType(outputType)
+	}
+	if len(routes) > 0 {
+		req.Routing = routes
+	}
+	if len(inputSpecs) > 0 {
+		for _, spec := range inputSpecs {
+			inp, err := parseInputSpec(spec)
+			if err != nil {
+				log.Printf("E103: %v", err)
+				os.Exit(exitBusiness)
+			}
+			req.Inputs = append(req.Inputs, inp)
+		}
+	}
+
+	resp := material.Inspect(req)
+
+	var jsonData []byte
+	if jsonOutput || jsonOutFile != "" {
+		jsonData, _ = json.Marshal(resp)
+	}
 
 	if jsonOutput {
-		data, _ := json.Marshal(resp)
-		fmt.Println(string(data))
+		fmt.Println(string(jsonData))
 	} else {
+		effectiveName := resp.MaterialName
+		if effectiveName == "" {
+			effectiveName = "M_CustomNode (default)"
+		}
+		fmt.Printf("Material: %s\n", effectiveName)
 		fmt.Printf("Output Type: %s\n", resp.EffectiveOutputType)
 		fmt.Printf("Routing: %s\n", strings.Join(resp.EffectiveRouting, ", "))
 		fmt.Printf("Inputs (%d):\n", len(resp.InferredInputs))
@@ -240,28 +293,63 @@ func runInspect(inFile string, jsonOutput bool) {
 		}
 	}
 
+	if jsonOutFile != "" {
+		writeJSONFile(jsonOutFile, jsonData)
+	}
+
 	if !resp.OK {
 		os.Exit(exitBusiness)
 	}
 }
 
-func runValidate(inFile, configFile string, jsonOutput bool) {
+func runValidate(inFile, configFile, matName, outputType string, routes, inputSpecs []string, jsonOutput bool, jsonOutFile string) {
 	hlsl := readInput(inFile)
-	var configJSON []byte
+
+	req := domain.GenerateRequest{HLSL: hlsl}
+	if matName != "" {
+		req.MaterialName = matName
+	}
+	if outputType != "" {
+		req.OutputType = domain.OutputType(outputType)
+	}
+	if len(routes) > 0 {
+		req.Routing = routes
+	}
+	if len(inputSpecs) > 0 {
+		for _, spec := range inputSpecs {
+			inp, err := parseInputSpec(spec)
+			if err != nil {
+				log.Printf("E103: %v", err)
+				os.Exit(exitBusiness)
+			}
+			req.Inputs = append(req.Inputs, inp)
+		}
+	}
+
+	// Apply JSON config file (merged before CLI flags take effect via overrides above)
 	if configFile != "" {
-		var err error
-		configJSON, err = os.ReadFile(configFile)
+		data, err := os.ReadFile(configFile)
 		if err != nil {
 			log.Printf("E100: read config: %v", err)
 			os.Exit(exitBusiness)
 		}
+		var cfg domain.GenerateRequest
+		if err := json.Unmarshal(data, &cfg); err != nil {
+			log.Printf("E100: JSON parse failed: %v", err)
+			os.Exit(exitBusiness)
+		}
+		mergeConfig(&req, &cfg)
 	}
 
-	resp := material.Validate(hlsl, configJSON)
+	resp := material.Validate(req)
+
+	var jsonData []byte
+	if jsonOutput || jsonOutFile != "" {
+		jsonData, _ = json.Marshal(resp)
+	}
 
 	if jsonOutput {
-		data, _ := json.Marshal(resp)
-		fmt.Println(string(data))
+		fmt.Println(string(jsonData))
 	} else {
 		if resp.OK {
 			fmt.Println("OK")
@@ -272,6 +360,10 @@ func runValidate(inFile, configFile string, jsonOutput bool) {
 		for _, e := range resp.Errors {
 			log.Printf("%s: %s", e.Code, e.Message)
 		}
+	}
+
+	if jsonOutFile != "" {
+		writeJSONFile(jsonOutFile, jsonData)
 	}
 
 	if !resp.OK {
@@ -341,6 +433,44 @@ func mergeConfig(req, cfg *domain.GenerateRequest) {
 	if cfg.Seed != 0 && req.Seed == 0 {
 		req.Seed = cfg.Seed
 	}
+}
+
+func writeJSONFile(path string, data []byte) {
+	out := append(data, '\n')
+	if err := os.WriteFile(path, out, 0644); err != nil {
+		log.Fatalf("write %s: %v", path, err)
+	}
+}
+
+// artifactConfig is the effective-config.json structure written by --artifact-dir.
+type artifactConfig struct {
+	MaterialName string            `json:"materialName"`
+	OutputType   domain.OutputType `json:"outputType"`
+	Routing      []string          `json:"routing,omitempty"`
+	Inputs       []domain.NodeInput `json:"inputs,omitempty"`
+	Seed         int64             `json:"seed,omitempty"`
+}
+
+func writeArtifacts(dir string, resp domain.GenerateResponse, jsonData []byte, seed int64) {
+	if err := os.MkdirAll(dir, 0755); err != nil {
+		log.Fatalf("create artifact dir %s: %v", dir, err)
+	}
+	// output.t3d — always CRLF (resp.T3D is never no-crlf'd)
+	if err := os.WriteFile(filepath.Join(dir, "output.t3d"), []byte(resp.T3D), 0644); err != nil {
+		log.Fatalf("write output.t3d: %v", err)
+	}
+	// generate.json
+	writeJSONFile(filepath.Join(dir, "generate.json"), jsonData)
+	// effective-config.json
+	cfg := artifactConfig{
+		MaterialName: resp.MaterialName,
+		OutputType:   resp.EffectiveOutputType,
+		Routing:      resp.EffectiveRouting,
+		Inputs:       resp.InferredInputs,
+		Seed:         seed,
+	}
+	cfgData, _ := json.Marshal(cfg)
+	writeJSONFile(filepath.Join(dir, "effective-config.json"), cfgData)
 }
 
 func copyToClipboard(text string) error {

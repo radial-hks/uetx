@@ -118,7 +118,9 @@ uetx generate -i shader.hlsl --clipboard
 | `-t, --output-type` | `CMOT_Float1..4` | 自动推断 |
 | `-r, --route` | 路由插槽（可重复） | 默认路由 |
 | `--input` | 输入规格 `名称:类型[:默认值[:rgb]]`（可重复） | 解析结果 |
-| `--json` | 输出 JSON 响应 | false |
+| `--json` | JSON 响应输出到 stdout；若 `-o` 为文件路径则仍写 T3D | false |
+| `--json-out` | 将 JSON 响应写入文件（UTF-8 无 BOM） | — |
+| `--artifact-dir` | 将 `output.t3d`、`generate.json`、`effective-config.json` 写入目录 | — |
 | `--stdin-json` | 从 stdin 读取 JSON 请求 | false |
 | `--seed` | 固定 GUID 种子 | 0（随机） |
 | `--clipboard` | 复制到系统剪贴板 | false |
@@ -126,24 +128,29 @@ uetx generate -i shader.hlsl --clipboard
 
 ### `uetx inspect`
 
-解析模板并显示推断的元数据（不生成 T3D）。
+解析模板并显示推断的元数据（不生成 T3D）。支持 `-m`、`-r`、`--input`、`-t` 等上下文参数，用于预览 `generate` 的最终有效配置。
 
 ```bash
 uetx inspect -i shader.hlsl
+# Material: M_CustomNode (default)
 # Output Type: CMOT_Float4
 # Routing: Base Color, Opacity
 # Inputs (7):
 #   - WorldPosition: vector
 #   - WaterLevel: scalar
 #   ...
+
+# 带上下文参数预览最终配置
+uetx inspect -i shader.hlsl -m M_Water -r "Base Color" -r "Emissive Color" --json
 ```
 
 ### `uetx validate`
 
-检查模板和配置是否有错误。
+检查模板和配置是否有错误。支持 `-m`、`-r`、`--input`、`-t` 等上下文参数，可验证完整的最终配置，包括路由插槽有效性（E102）、输出类型（E101）、材质名（E110）和输入类型（E103）。
 
 ```bash
 uetx validate -i shader.hlsl -c config.json
+uetx validate -i shader.hlsl -m M_Water -r "Base Color" --json
 ```
 
 ### `uetx version`
