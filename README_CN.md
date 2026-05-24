@@ -27,7 +27,7 @@ HLSL 模板 → 解析 → 中间表示 (GraphNode / Pin / Edge) → 序列化 �
 
 ## 安装
 
-**从源码安装（需要 Go 1.22+）：**
+**从源码安装（需要 Go 1.23+）：**
 
 ```bash
 go install github.com/radial/uetx/cmd/uetx@latest

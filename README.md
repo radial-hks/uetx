@@ -27,7 +27,7 @@ HLSL Template → Parse → IR (GraphNode / Pin / Edge) → Serialize → T3D Te
 
 ## Installation
 
-**From source (requires Go 1.22+):**
+**From source (requires Go 1.23+):**
 
 ```bash
 go install github.com/radial/uetx/cmd/uetx@latest
@@ -252,7 +252,7 @@ internal/domain/           ← Pure data types (zero dependencies)
 |------|---------|
 | 0 | Success |
 | 1 | Business error (parse failure, invalid config) |
-| 2 | Warnings only (validate strict mode) |
+| 2 | Reserved |
 | 64 | Usage error (invalid flags) |
 | 70 | Internal error |
 
