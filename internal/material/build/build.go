@@ -78,7 +78,8 @@ func BuildIR(req BuildRequest, guidFn domain.GUIDFunc) (*BuildResult, []domain.D
 	}
 
 	// 3. Parameter nodes
-	paramNodes, inputsStrings := buildParams(req.Inputs, customGraphName, customExprName, &nodeIndex, guidFn)
+	paramNodes, inputsStrings, paramDiags := buildParams(req.Inputs, customGraphName, customExprName, &nodeIndex, guidFn)
+	diags = append(diags, paramDiags...)
 
 	// Fill custom node extraBody
 	customNode.ExtraBody = buildCustomExtraBody(req.HLSL, req.OutputType, inputsStrings)
@@ -114,16 +115,24 @@ func BuildIR(req BuildRequest, guidFn domain.GUIDFunc) (*BuildResult, []domain.D
 	}
 
 	// 5. Routing edges
+	breakOutChannels := []string{"R", "G", "B", "A"}
+	scalarIdx := 0
 	for _, slot := range effectiveRouting {
 		rootPin := findRootPin(root, slot)
 		if rootPin == nil {
+			diags = append(diags, domain.Diagnostic{
+				Code:    "W009",
+				Message: fmt.Sprintf("routing slot %q does not match any root pin; dropped", slot),
+			})
 			continue
 		}
 
 		if needsBO && breakOutNode != nil {
 			if _, isScalar := domain.ScalarSlots[slot]; isScalar {
+				ch := breakOutChannels[scalarIdx%len(breakOutChannels)]
+				scalarIdx++
 				edges = append(edges, domain.Edge{
-					From: domain.PinRef{GraphName: breakOutNode.GraphName, PinID: breakOutPinMap["A"]},
+					From: domain.PinRef{GraphName: breakOutNode.GraphName, PinID: breakOutPinMap[ch]},
 					To:   domain.PinRef{GraphName: root.GraphName, PinID: rootPin.ID},
 				})
 				continue
@@ -136,7 +145,12 @@ func BuildIR(req BuildRequest, guidFn domain.GUIDFunc) (*BuildResult, []domain.D
 	}
 
 	// 6. Apply edges bidirectionally
-	applyEdges(edges, nodes)
+	if err := applyEdges(edges, nodes); err != nil {
+		diags = append(diags, domain.Diagnostic{
+			Code:    "E099",
+			Message: err.Error(),
+		})
+	}
 
 	return &BuildResult{
 		Nodes:       nodes,
@@ -168,9 +182,10 @@ func buildRoot(guidFn domain.GUIDFunc) *domain.GraphNode {
 }
 
 // buildParams creates parameter nodes for each input.
-func buildParams(inputs []domain.NodeInput, customGraphName, customExprName string, nodeIndex *int, guidFn domain.GUIDFunc) ([]*domain.GraphNode, []string) {
+func buildParams(inputs []domain.NodeInput, customGraphName, customExprName string, nodeIndex *int, guidFn domain.GUIDFunc) ([]*domain.GraphNode, []string, []domain.Diagnostic) {
 	nodes := make([]*domain.GraphNode, 0, len(inputs))
 	inputsStrings := make([]string, 0, len(inputs))
+	var diags []domain.Diagnostic
 
 	for i, inp := range inputs {
 		graphName := fmt.Sprintf("MaterialGraphNode_%d", *nodeIndex)
@@ -186,7 +201,13 @@ func buildParams(inputs []domain.NodeInput, customGraphName, customExprName stri
 		switch inp.Type {
 		case domain.ParamScalar:
 			exprClass = "MaterialExpressionScalarParameter"
-			val := parseScalarDefault(inp.DefaultValue)
+			val, err := parseScalarDefault(inp.DefaultValue)
+			if err != nil {
+				diags = append(diags, domain.Diagnostic{
+					Code:    "W010",
+					Message: fmt.Sprintf("input %q: %v; falling back to 0", inp.Name, err),
+				})
+			}
 			extraBody = fmt.Sprintf("      DefaultValue=%s\r\n      ParameterName=\"%s\"", val, inp.Name)
 			pins = []*domain.Pin{
 				{ID: outPinID, Name: "Output", Dir: domain.PinDirOut, FriendlyName: friendly, IsUObjectWrapper: true},
@@ -194,7 +215,13 @@ func buildParams(inputs []domain.NodeInput, customGraphName, customExprName stri
 
 		case domain.ParamVector:
 			exprClass = "MaterialExpressionVectorParameter"
-			r, g, b, a := parseVectorDefault(inp.DefaultValue)
+			r, g, b, a, err := parseVectorDefault(inp.DefaultValue)
+			if err != nil {
+				diags = append(diags, domain.Diagnostic{
+					Code:    "W010",
+					Message: fmt.Sprintf("input %q: %v; falling back to defaults", inp.Name, err),
+				})
+			}
 			extraBody = fmt.Sprintf("      DefaultValue=(R=%s,G=%s,B=%s,A=%s)\r\n      ParameterName=\"%s\"",
 				r, g, b, a, inp.Name)
 			pins = []*domain.Pin{
@@ -250,7 +277,7 @@ func buildParams(inputs []domain.NodeInput, customGraphName, customExprName stri
 		))
 	}
 
-	return nodes, inputsStrings
+	return nodes, inputsStrings, diags
 }
 
 // buildBreakOut creates the BreakOutFloat4Components function call node.
@@ -321,6 +348,7 @@ func escapeHLSL(code string) string {
 		"\r\n", `\r\n`,
 		"\n", `\r\n`,
 		`"`, `\"`,
+		"\r", `\r\n`,
 	)
 	return r.Replace(code)
 }
@@ -334,7 +362,7 @@ func findRootPin(root *domain.GraphNode, slotName string) *domain.Pin {
 	return nil
 }
 
-func applyEdges(edges []domain.Edge, nodes []*domain.GraphNode) {
+func applyEdges(edges []domain.Edge, nodes []*domain.GraphNode) error {
 	pinIndex := map[string]*domain.Pin{} // "graphName:pinID" -> *Pin
 	for _, n := range nodes {
 		for _, p := range n.Pins {
@@ -344,59 +372,62 @@ func applyEdges(edges []domain.Edge, nodes []*domain.GraphNode) {
 	for _, e := range edges {
 		fromPin := pinIndex[e.From.GraphName+":"+e.From.PinID]
 		toPin := pinIndex[e.To.GraphName+":"+e.To.PinID]
+		// Invariant: edges are built from pin IDs that exist in the node list.
+		// A nil pin here means the edge list and node list disagree — a bug.
 		if fromPin == nil || toPin == nil {
-			continue
+			return fmt.Errorf("applyEdges: edge references unknown pin (from=%s:%s to=%s:%s)",
+				e.From.GraphName, e.From.PinID, e.To.GraphName, e.To.PinID)
 		}
 		fromPin.LinkedTo = append(fromPin.LinkedTo, domain.PinRef{GraphName: e.To.GraphName, PinID: e.To.PinID})
 		toPin.LinkedTo = append(toPin.LinkedTo, domain.PinRef{GraphName: e.From.GraphName, PinID: e.From.PinID})
 	}
+	return nil
 }
 
-func parseScalarDefault(val string) string {
-	f, err := strconv.ParseFloat(strings.TrimSpace(val), 64)
-	if err != nil {
-		f = 0
+func parseScalarDefault(val string) (string, error) {
+	trimmed := strings.TrimSpace(val)
+	if trimmed == "" {
+		return strconv.FormatFloat(0, 'f', 6, 64), nil
 	}
-	return strconv.FormatFloat(f, 'f', 6, 64)
+	f, err := strconv.ParseFloat(trimmed, 64)
+	if err != nil {
+		return strconv.FormatFloat(0, 'f', 6, 64), fmt.Errorf("invalid scalar default %q: %w", val, err)
+	}
+	return strconv.FormatFloat(f, 'f', 6, 64), nil
 }
 
-func parseVectorDefault(val string) (r, g, b, a string) {
+func parseVectorDefault(val string) (r, g, b, a string, err error) {
 	rr, gg, bb, aa := 0.0, 0.0, 0.0, 1.0
 	if val == "" {
-		return fmtF(rr), fmtF(gg), fmtF(bb), fmtF(aa)
+		return fmtF(rr), fmtF(gg), fmtF(bb), fmtF(aa), nil
 	}
 	parts := strings.Split(val, ",")
 	for i := range parts {
 		parts[i] = strings.TrimSpace(parts[i])
 	}
+	var bad []string
 	if len(parts) == 1 {
-		v, err := strconv.ParseFloat(parts[0], 64)
-		if err == nil {
+		v, perr := strconv.ParseFloat(parts[0], 64)
+		if perr != nil {
+			bad = append(bad, parts[0])
+		} else {
 			rr, gg, bb = v, v, v
 		}
-		return fmtF(rr), fmtF(gg), fmtF(bb), fmtF(aa)
-	}
-	if len(parts) >= 1 {
-		if v, err := strconv.ParseFloat(parts[0], 64); err == nil {
-			rr = v
+	} else {
+		targets := []*float64{&rr, &gg, &bb, &aa}
+		for i := 0; i < len(parts) && i < 4; i++ {
+			v, perr := strconv.ParseFloat(parts[i], 64)
+			if perr != nil {
+				bad = append(bad, parts[i])
+				continue
+			}
+			*targets[i] = v
 		}
 	}
-	if len(parts) >= 2 {
-		if v, err := strconv.ParseFloat(parts[1], 64); err == nil {
-			gg = v
-		}
+	if len(bad) > 0 {
+		err = fmt.Errorf("invalid vector default %q: unparseable component(s) %v", val, bad)
 	}
-	if len(parts) >= 3 {
-		if v, err := strconv.ParseFloat(parts[2], 64); err == nil {
-			bb = v
-		}
-	}
-	if len(parts) >= 4 {
-		if v, err := strconv.ParseFloat(parts[3], 64); err == nil {
-			aa = v
-		}
-	}
-	return fmtF(rr), fmtF(gg), fmtF(bb), fmtF(aa)
+	return fmtF(rr), fmtF(gg), fmtF(bb), fmtF(aa), err
 }
 
 func fmtF(f float64) string {

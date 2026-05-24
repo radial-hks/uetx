@@ -1,11 +1,14 @@
 package material
 
 import (
+	"fmt"
 	"os"
 	"strings"
 	"testing"
 
 	"github.com/radial/uetx/internal/domain"
+	"github.com/radial/uetx/internal/material/build"
+	"github.com/radial/uetx/internal/material/parser"
 )
 
 func TestGenerate_WaterLevel(t *testing.T) {
@@ -52,6 +55,10 @@ func TestGenerate_WaterLevel(t *testing.T) {
 			t.Fatal("found bare LF in T3D output")
 		}
 	}
+
+	expected := buildIRForTest(t, string(hlsl), "M_WaterLevel", 1)
+	actual := buildIRForTest(t, string(hlsl), "M_WaterLevel", 2)
+	assertGraphIsomorphism(t, expected, actual)
 }
 
 func TestGenerate_WithExplicitInputs(t *testing.T) {
@@ -202,6 +209,106 @@ func TestValidate_InvalidOutputType(t *testing.T) {
 	if !hasE101 {
 		t.Error("expected E101 error")
 	}
+}
+
+func buildIRForTest(t *testing.T, hlsl, matName string, seed int64) *build.BuildResult {
+	t.Helper()
+	parsed, _ := parser.ParseTemplate(hlsl)
+	ot := parsed.OutputType
+	if !parsed.HasOutputType {
+		ot = domain.CMOTFloat3
+	}
+	result, diags := build.BuildIR(build.BuildRequest{
+		HLSL:         hlsl,
+		Inputs:       parsed.Inputs,
+		OutputType:   ot,
+		Routing:      domain.DefaultRouting(ot),
+		MaterialName: matName,
+	}, domain.NewSeededGUIDFunc(seed))
+	for _, d := range diags {
+		if d.Code[0] == 'E' {
+			t.Fatalf("build error: %+v", d)
+		}
+	}
+	return result
+}
+
+// assertGraphIsomorphism checks structural equivalence between two BuildResults
+// (GUIDs differ but edges must match by GraphName+PinName, and Custom node Code must be non-empty).
+func assertGraphIsomorphism(t *testing.T, expected, actual *build.BuildResult) {
+	t.Helper()
+
+	if len(expected.Nodes) != len(actual.Nodes) {
+		t.Fatalf("node count: expected %d, got %d", len(expected.Nodes), len(actual.Nodes))
+	}
+	if len(expected.Edges) != len(actual.Edges) {
+		t.Fatalf("edge count: expected %d, got %d", len(expected.Edges), len(actual.Edges))
+	}
+
+	expSet := edgeKeySet(t, expected)
+	actSet := edgeKeySet(t, actual)
+	for k := range expSet {
+		if _, ok := actSet[k]; !ok {
+			t.Errorf("missing edge in actual graph: %s", k)
+		}
+	}
+	for k := range actSet {
+		if _, ok := expSet[k]; !ok {
+			t.Errorf("unexpected edge in actual graph: %s", k)
+		}
+	}
+
+	assertCustomCodeNonEmpty(t, expected)
+	assertCustomCodeNonEmpty(t, actual)
+}
+
+func edgeKeySet(t *testing.T, r *build.BuildResult) map[string]struct{} {
+	t.Helper()
+	pinName := make(map[string]string, len(r.Nodes)*8) // graphName|pinID -> pinName
+	for _, n := range r.Nodes {
+		for _, p := range n.Pins {
+			pinName[n.GraphName+"|"+p.ID] = p.Name
+		}
+	}
+	set := make(map[string]struct{}, len(r.Edges))
+	for _, e := range r.Edges {
+		fromName, ok := pinName[e.From.GraphName+"|"+e.From.PinID]
+		if !ok {
+			t.Fatalf("edge references unknown from pin: %s.%s", e.From.GraphName, e.From.PinID)
+		}
+		toName, ok := pinName[e.To.GraphName+"|"+e.To.PinID]
+		if !ok {
+			t.Fatalf("edge references unknown to pin: %s.%s", e.To.GraphName, e.To.PinID)
+		}
+		key := fmt.Sprintf("%s.%s -> %s.%s", e.From.GraphName, fromName, e.To.GraphName, toName)
+		set[key] = struct{}{}
+	}
+	return set
+}
+
+func assertCustomCodeNonEmpty(t *testing.T, r *build.BuildResult) {
+	t.Helper()
+	for _, n := range r.Nodes {
+		if n.ExprClass == "MaterialExpressionCustom" {
+			if !strings.Contains(n.ExtraBody, "Code=\"") {
+				t.Errorf("Custom node %s has no Code field", n.GraphName)
+				return
+			}
+			// Code="..." — ensure inner content non-empty
+			start := strings.Index(n.ExtraBody, "Code=\"")
+			if start < 0 {
+				t.Errorf("Custom node %s has no Code field", n.GraphName)
+				return
+			}
+			rest := n.ExtraBody[start+len("Code=\""):]
+			end := strings.Index(rest, "\"")
+			if end <= 0 {
+				t.Errorf("Custom node %s has empty Code", n.GraphName)
+			}
+			return
+		}
+	}
+	t.Error("no Custom node found")
 }
 
 func TestValidate_InvalidMaterialName(t *testing.T) {

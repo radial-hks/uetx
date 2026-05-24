@@ -411,7 +411,7 @@ func parseInputSpec(spec string) (domain.NodeInput, error) {
 	if len(parts) >= 3 {
 		inp.DefaultValue = parts[2]
 	}
-	if len(parts) >= 4 && strings.EqualFold(parts[3], "true") {
+	if len(parts) >= 4 && (strings.EqualFold(parts[3], "rgb") || strings.EqualFold(parts[3], "true")) {
 		inp.UseRGBMask = true
 	}
 	return inp, nil
