@@ -37,7 +37,7 @@ func Generate(req domain.GenerateRequest) domain.GenerateResponse {
 	if len(inputs) == 0 || outputType == "" {
 		parsed, diags := parser.ParseTemplate(req.HLSL)
 		for _, d := range diags {
-			if d.Code[0] == 'E' {
+			if len(d.Code) > 0 && d.Code[0] == 'E' {
 				errors = append(errors, d)
 			} else {
 				warnings = append(warnings, d)
@@ -63,9 +63,22 @@ func Generate(req domain.GenerateRequest) domain.GenerateResponse {
 	if len(routing) == 0 {
 		routing = domain.DefaultRouting(outputType)
 		warnings = append(warnings, domain.Diagnostic{
-			Code:    "W005",
+			Code:    "W008",
 			Message: "routing empty, using default routing",
 		})
+	}
+
+	// W005: routing contains scalar slot but outputType is not Float4
+	if outputType != domain.CMOTFloat4 {
+		for _, slot := range routing {
+			if _, ok := domain.ScalarSlots[slot]; ok {
+				warnings = append(warnings, domain.Diagnostic{
+					Code:    "W005",
+					Message: fmt.Sprintf("routing contains scalar slot %q but outputType is %s (expected CMOT_Float4)", slot, outputType),
+				})
+				break
+			}
+		}
 	}
 
 	// GUID function
@@ -85,7 +98,7 @@ func Generate(req domain.GenerateRequest) domain.GenerateResponse {
 		MaterialName: matName,
 	}, guidFn)
 	for _, d := range bdiags {
-		if d.Code[0] == 'E' {
+		if len(d.Code) > 0 && d.Code[0] == 'E' {
 			errors = append(errors, d)
 		} else {
 			warnings = append(warnings, d)
@@ -121,7 +134,7 @@ func Inspect(req domain.GenerateRequest) domain.GenerateResponse {
 	parsed, diags := parser.ParseTemplate(req.HLSL)
 	var warnings, errors []domain.Diagnostic
 	for _, d := range diags {
-		if d.Code[0] == 'E' {
+		if len(d.Code) > 0 && d.Code[0] == 'E' {
 			errors = append(errors, d)
 		} else {
 			warnings = append(warnings, d)
