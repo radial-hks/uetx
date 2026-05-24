@@ -12,6 +12,21 @@ import (
 
 var materialNameRe = regexp.MustCompile(`^[A-Za-z0-9_]+$`)
 
+// returnKeywordRe matches the HLSL `return` keyword as a standalone token.
+var returnKeywordRe = regexp.MustCompile(`\breturn\b`)
+
+// lineCommentRe strips // line comments; blockCommentRe strips /* ... */ blocks.
+var lineCommentRe = regexp.MustCompile(`//[^\n]*`)
+var blockCommentRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
+
+// stripCommentsForScan removes comments so identifier/keyword scans don't trip
+// on template metadata blocks.
+func stripCommentsForScan(s string) string {
+	s = blockCommentRe.ReplaceAllString(s, "")
+	s = lineCommentRe.ReplaceAllString(s, "")
+	return s
+}
+
 // Generate runs the full pipeline: parse → build → serialize.
 func Generate(req domain.GenerateRequest) domain.GenerateResponse {
 	var warnings []domain.Diagnostic
@@ -55,6 +70,37 @@ func Generate(req domain.GenerateRequest) domain.GenerateResponse {
 			} else {
 				outputType = domain.CMOTFloat3
 			}
+		}
+	}
+
+	// W001: HLSL missing `return` statement
+	codeBody := stripCommentsForScan(req.HLSL)
+	if !returnKeywordRe.MatchString(codeBody) {
+		warnings = append(warnings, domain.Diagnostic{
+			Code:    "W001",
+			Message: "HLSL template has no `return` statement",
+			Hint:    "Custom node expects an HLSL function body that returns a value",
+		})
+	}
+
+	// W003: pin name not referenced as a variable in the HLSL code body
+	for _, inp := range inputs {
+		varRe := regexp.MustCompile(`\b` + regexp.QuoteMeta(inp.Name) + `\b`)
+		if !varRe.MatchString(codeBody) {
+			warnings = append(warnings, domain.Diagnostic{
+				Code:    "W003",
+				Message: fmt.Sprintf("pin %q is not referenced in the HLSL code body", inp.Name),
+			})
+		}
+	}
+
+	// W004: useRGBMask=true on non-vector param type (silently dropped by build)
+	for _, inp := range inputs {
+		if inp.UseRGBMask && inp.Type != domain.ParamVector {
+			warnings = append(warnings, domain.Diagnostic{
+				Code:    "W004",
+				Message: fmt.Sprintf("useRGBMask=true on non-vector input %q (type=%s); mask will be ignored", inp.Name, inp.Type),
+			})
 		}
 	}
 

@@ -25,7 +25,9 @@ func NewSeededGUIDFunc(seed int64) GUIDFunc {
 	r := mrand.New(mrand.NewSource(seed))
 	return func() string {
 		b := make([]byte, 16)
-		r.Read(b)
+		for i := range b {
+			b[i] = byte(r.Int63() >> 56)
+		}
 		return strings.ToUpper(hex.EncodeToString(b))
 	}
 }
