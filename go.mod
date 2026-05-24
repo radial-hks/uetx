@@ -1,3 +1,3 @@
 module github.com/radial/uetx
 
-go 1.26.1
+go 1.23
