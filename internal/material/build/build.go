@@ -78,7 +78,7 @@ func BuildIR(req BuildRequest, guidFn domain.GUIDFunc) (*BuildResult, []domain.D
 	}
 
 	// 3. Parameter nodes
-	paramNodes, inputsStrings, paramDiags := buildParams(req.Inputs, customGraphName, customExprName, &nodeIndex, guidFn)
+	paramNodes, inputsStrings, paramDiags := buildParams(req.Inputs, &nodeIndex, guidFn)
 	diags = append(diags, paramDiags...)
 
 	// Fill custom node extraBody
@@ -182,7 +182,7 @@ func buildRoot(guidFn domain.GUIDFunc) *domain.GraphNode {
 }
 
 // buildParams creates parameter nodes for each input.
-func buildParams(inputs []domain.NodeInput, customGraphName, customExprName string, nodeIndex *int, guidFn domain.GUIDFunc) ([]*domain.GraphNode, []string, []domain.Diagnostic) {
+func buildParams(inputs []domain.NodeInput, nodeIndex *int, guidFn domain.GUIDFunc) ([]*domain.GraphNode, []string, []domain.Diagnostic) {
 	nodes := make([]*domain.GraphNode, 0, len(inputs))
 	inputsStrings := make([]string, 0, len(inputs))
 	var diags []domain.Diagnostic

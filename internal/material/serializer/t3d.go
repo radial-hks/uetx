@@ -15,7 +15,7 @@ func SerializeGraph(nodes []*domain.GraphNode, materialName string) string {
 	for i, n := range nodes {
 		parts[i] = serializeNode(n, materialName)
 	}
-	return strings.Join(parts, crlf)
+	return strings.Join(parts, crlf) + crlf
 }
 
 func serializeNode(node *domain.GraphNode, matName string) string {

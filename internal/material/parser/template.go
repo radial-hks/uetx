@@ -16,9 +16,12 @@ type ParseResult struct {
 }
 
 var (
-	commentBlockRe = regexp.MustCompile(`(?s)/\*.*?\*/`)
-	pinRe          = regexp.MustCompile(`(?i)Pin\s+\d+\s+Name:\s*\[([^\]]+)\]\s*\|\s*Type suggestion:\s*([^\n|(]+)(?:\s*\(Default:\s*([^)]+)\))?`)
-	outputTypeRe   = regexp.MustCompile(`(?i)Output Type\s*(?:\(输出类型\))?:\s*\[(.*?)\]`)
+	commentBlockRe   = regexp.MustCompile(`(?s)/\*.*?\*/`)
+	pinRe            = regexp.MustCompile(`(?i)Pin\s+\d+\s+Name:\s*\[([^\]]+)\]\s*\|\s*Type suggestion:\s*([^\n|(]+)(?:\s*\(Default:\s*([^)]+)\))?`)
+	outputTypeRe     = regexp.MustCompile(`(?i)Output Type\s*(?:\(输出类型\))?:\s*\[(.*?)\]`)
+	floatSpaceRe     = regexp.MustCompile(`(?i)Float\s+(\d)`)
+	whitespaceRe     = regexp.MustCompile(`\s+`)
+	pinKeywordRe     = regexp.MustCompile(`(?i)\bPin\b`)
 )
 
 // ParseTemplate extracts NodeInputs and OutputType from the first comment block.
@@ -34,7 +37,7 @@ func ParseTemplate(hlsl string) (ParseResult, []domain.Diagnostic) {
 		return result, diags
 	}
 
-	block := commentBlockRe.FindString(hlsl)
+	block := selectCommentBlock(hlsl)
 	if block == "" {
 		diags = append(diags, domain.Diagnostic{
 			Code:    "E002",
@@ -101,9 +104,9 @@ func ParseTemplate(hlsl string) (ParseResult, []domain.Diagnostic) {
 func normalizeOutputType(raw string) (domain.OutputType, error) {
 	s := strings.TrimSpace(raw)
 	// "Float 4" → "Float4"
-	s = regexp.MustCompile(`(?i)Float\s+(\d)`).ReplaceAllString(s, "Float$1")
+	s = floatSpaceRe.ReplaceAllString(s, "Float$1")
 	// All whitespace → underscore
-	s = regexp.MustCompile(`\s+`).ReplaceAllString(s, "_")
+	s = whitespaceRe.ReplaceAllString(s, "_")
 
 	switch s {
 	case "CMOT_Float1":
@@ -117,4 +120,26 @@ func normalizeOutputType(raw string) (domain.OutputType, error) {
 	default:
 		return "", fmt.Errorf("invalid output type: %s", s)
 	}
+}
+
+// selectCommentBlock returns the first /* ... */ block containing a "Pin"
+// keyword. If none qualify, it returns the longest block, or "" if there are
+// no comment blocks at all.
+func selectCommentBlock(hlsl string) string {
+	blocks := commentBlockRe.FindAllString(hlsl, -1)
+	if len(blocks) == 0 {
+		return ""
+	}
+	for _, b := range blocks {
+		if pinKeywordRe.MatchString(b) {
+			return b
+		}
+	}
+	longest := blocks[0]
+	for _, b := range blocks[1:] {
+		if len(b) > len(longest) {
+			longest = b
+		}
+	}
+	return longest
 }
